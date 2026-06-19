@@ -15,9 +15,15 @@ resource "aws_dynamodb_table" "inquiries" {
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "inquiry_id"
 
-  attribute { name = "inquiry_id", type = "S" }
+  attribute {
+    name = "inquiry_id"
+    type = "S"
+  }
 
-  ttl { attribute_name = "expires_at", enabled = true }
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
 
   tags = { Project = var.project_name }
 }
