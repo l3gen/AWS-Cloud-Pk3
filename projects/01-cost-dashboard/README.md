@@ -49,3 +49,4 @@ manually to see your first report immediately.
 > breaks spend down by service, and emails a report automatically. It also
 > has budget alerts at 80% and 100% so nothing is a surprise. All of it is
 > Terraform — you can deploy it or destroy it in one command."
+# Deploying Project 01 - Cost Visibility Dashboard
