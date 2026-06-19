@@ -15,7 +15,10 @@ resource "aws_dynamodb_table" "inventory" {
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "item_id"
 
-  attribute { name = "item_id", type = "S" }
+  attribute {
+    name = "item_id"
+    type = "S"
+  }
 
   tags = { Project = var.project_name }
 }
