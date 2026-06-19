@@ -21,28 +21,15 @@ def get_ai_advice(low_stock_items):
         return "All inventory levels are healthy."
 
     item_list = "\n".join(
-        f"- {i['name']}: {i['quantity']} units remaining (avg daily sales: {i.get('daily_sales_avg', 'unknown')})"
+        f"- {i['name']}: {i['quantity']} units remaining"
         for i in low_stock_items
     )
 
     prompt = (
-        "You are an inventory management advisor.
-"
-        "The following items are running low on stock:
-
-"
-        f"{item_list}
-
-"
-        "For each item, provide:
-"
-        "1. Days of stock remaining (if daily sales avg is provided)
-"
-        "2. Recommended restock quantity
-"
-        "3. Urgency level (LOW/MEDIUM/HIGH/CRITICAL)
-
-"
+        "You are an inventory management advisor.\n"
+        "The following items are running low on stock:\n\n"
+        f"{item_list}\n\n"
+        "For each item provide: recommended restock quantity and urgency level (LOW/MEDIUM/HIGH/CRITICAL).\n"
         "Be concise. Format as a brief bullet list."
     )
 
@@ -60,11 +47,9 @@ def get_ai_advice(low_stock_items):
     return result["content"][0]["text"]
 
 def lambda_handler(event, context):
-    # Triggered by EventBridge daily check
     if event.get("action") == "daily_check":
         return daily_stock_check()
 
-    # API Gateway routing
     method = event.get("requestContext", {}).get("http", {}).get("method", "GET")
     path   = event.get("rawPath", "/")
 
@@ -82,12 +67,11 @@ def lambda_handler(event, context):
 
 def add_item(body):
     item = {
-        "item_id":        str(uuid.uuid4()),
-        "name":           body.get("name", "Unnamed"),
-        "quantity":       Decimal(str(body.get("quantity", 0))),
-        "category":       body.get("category", "general"),
-        "daily_sales_avg": Decimal(str(body.get("daily_sales_avg", 0))),
-        "created_at":     datetime.now(timezone.utc).isoformat(),
+        "item_id":   str(uuid.uuid4()),
+        "name":      body.get("name", "Unnamed"),
+        "quantity":  Decimal(str(body.get("quantity", 0))),
+        "category":  body.get("category", "general"),
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
     table.put_item(Item=item)
     return {"statusCode": 201, "body": json.dumps({"item_id": item["item_id"]})}
@@ -107,20 +91,18 @@ def update_stock(item_id, body):
     return {"statusCode": 200, "body": json.dumps({"updated": True})}
 
 def get_advice():
-    resp       = table.scan()
-    all_items  = json.loads(json.dumps(resp["Items"], default=decimal_default))
-    low_stock  = [i for i in all_items if float(i.get("quantity", 0)) <= THRESHOLD]
-    advice     = get_ai_advice(low_stock)
+    resp      = table.scan()
+    all_items = json.loads(json.dumps(resp["Items"], default=decimal_default))
+    low_stock = [i for i in all_items if float(i.get("quantity", 0)) <= THRESHOLD]
+    advice    = get_ai_advice(low_stock)
     return {"statusCode": 200, "body": json.dumps({"low_stock_count": len(low_stock), "advice": advice})}
 
 def daily_stock_check():
     resp      = table.scan()
     all_items = json.loads(json.dumps(resp["Items"], default=decimal_default))
     low_stock = [i for i in all_items if float(i.get("quantity", 0)) <= THRESHOLD]
-
     if low_stock:
         advice = get_ai_advice(low_stock)
-        message = f"Daily Inventory Alert\n{len(low_stock)} items below threshold ({THRESHOLD} units)\n\nAI Restock Advice:\n{advice}"
-        sns.publish(TopicArn=TOPIC, Subject=f"Inventory Alert: {len(low_stock)} items low", Message=message)
-
-    return {"statusCode": 200, "checked": len(all_items), "low_stock": len(low_stock)}
+        msg = f"Daily Inventory Alert\n{len(low_stock)} items below threshold ({THRESHOLD} units)\n\nAI Advice:\n{advice}"
+        sns.publish(TopicArn=TOPIC, Subject=f"Inventory Alert: {len(low_stock)} items low", Message=msg)
+    return {"statusCode": 200, "body": json.dumps({"checked": len(all_items), "low_stock": len(low_stock)})}
