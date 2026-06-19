@@ -17,13 +17,6 @@ resource "aws_sns_topic_subscription" "email" {
   protocol  = "email"
   endpoint  = var.alert_email
 }
-
-resource "aws_sns_topic_subscription" "sms" {
-  topic_arn = aws_sns_topic.alerts.arn
-  protocol  = "sms"
-  endpoint  = var.alert_phone
-}
-
 # ── IAM Role ────────────────────────────────────────────────────────────────
 resource "aws_iam_role" "lambda_exec" {
   name = "${var.project_name}-lambda-role"
