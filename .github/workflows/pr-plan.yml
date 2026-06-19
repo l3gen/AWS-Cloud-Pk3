@@ -13,6 +13,7 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         project:
           - 01-cost-dashboard

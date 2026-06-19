@@ -20,7 +20,10 @@ resource "aws_dynamodb_table" "inquiries" {
     type = "S"
   }
 
-  ttl { attribute_name = "expires_at", enabled = true }
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
 
   tags = { Project = var.project_name }
 }
