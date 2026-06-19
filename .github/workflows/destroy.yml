@@ -1,0 +1,60 @@
+name: "Destroy — Terraform Destroy"
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Project to destroy"
+        required: true
+        type: choice
+        options:
+          - 01-cost-dashboard
+          - 02-backup-system
+          - 03-uptime-monitor
+          - 04-inquiry-manager
+          - 05-inventory-tracker
+          - ALL_PROJECTS
+      confirm:
+        description: "Type DESTROY to confirm"
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'DESTROY'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-terraform
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Destroy selected project
+        if: github.event.inputs.project != 'ALL_PROJECTS'
+        working-directory: projects/${{ github.event.inputs.project }}
+        run: |
+          terraform init
+          terraform destroy -auto-approve
+
+      - name: Destroy ALL projects
+        if: github.event.inputs.project == 'ALL_PROJECTS'
+        run: |
+          for project in 05-inventory-tracker 04-inquiry-manager 03-uptime-monitor 02-backup-system 01-cost-dashboard; do
+            echo "=== Destroying $project ==="
+            cd projects/$project
+            terraform init
+            terraform destroy -auto-approve
+            cd ../..
+          done

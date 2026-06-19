@@ -1,0 +1,56 @@
+name: "Deploy — Terraform Apply"
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Deploy a specific project (leave blank for all)"
+        required: false
+        default: "all"
+        type: choice
+        options: [all, 01-cost-dashboard, 02-backup-system, 03-uptime-monitor, 04-inquiry-manager, 05-inventory-tracker]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - 01-cost-dashboard
+          - 02-backup-system
+          - 03-uptime-monitor
+          - 04-inquiry-manager
+          - 05-inventory-tracker
+
+    defaults:
+      run:
+        working-directory: projects/${{ matrix.project }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-terraform
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      - name: Show Outputs
+        run: terraform output
